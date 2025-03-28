@@ -3,15 +3,13 @@ package jellyfin
 import "time"
 
 type session struct {
-	IsActive            bool      `json:"IsActive"`
 	LastActivityDate    time.Time `json:"LastActivityDate"`
 	LastPlaybackCheckIn time.Time `json:"LastPlaybackCheckIn"`
 	NowPlayingItem      *struct {
 		ID string `json:"Id"`
 	} `json:"NowPlayingItem,omitempty"`
 	PlayState struct {
-		IsPaused   bool   `json:"IsPaused"`
-		PlayMethod string `json:"PlayMethod,omitempty"`
+		IsPaused bool `json:"IsPaused"`
 	} `json:"PlayState"`
 	UserName string `json:"UserName"`
 }

@@ -34,14 +34,14 @@ func NewClient(jellyfinHost, jellyfinToken string) *Client {
 }
 
 func (c *Client) GetActiveStreamsPerUser() (map[string]int, error) {
-	sessions, err := queryJellyfinApi[session](fmt.Sprintf("%s/Sessions?ApiKey=%s", c.jHost, c.jToken), c.httpClient)
+	sessions, err := queryJellyfinApi[[]session](fmt.Sprintf("%s/Sessions?ApiKey=%s", c.jHost, c.jToken), c.httpClient)
 	if err != nil {
 		return nil, err
 	}
 
 	userCountMap := make(map[string]int)
 	for i := 0; i < len(sessions); i++ {
-		if sessions[i].IsActive && sessions[i].PlayState.PlayMethod != "" && !sessions[i].PlayState.IsPaused {
+		if c.isActivelyPlaying(sessions[i]) {
 			userCountMap[sessions[i].UserName]++
 		}
 	}
@@ -49,20 +49,53 @@ func (c *Client) GetActiveStreamsPerUser() (map[string]int, error) {
 	return userCountMap, nil
 }
 
+func (c *Client) isActivelyPlaying(s session) bool {
+	// Session is connected, but not playing media.
+	if s.NowPlayingItem == nil {
+		return false
+	}
+
+	// If a client has not checked in for 2 minutes, consider it stale.
+	if time.Since(s.LastPlaybackCheckIn) > 2*time.Minute {
+		return false
+	}
+
+	// Session started playing media, but has paused.
+	if s.PlayState.IsPaused {
+		return false
+	}
+
+	return true
+}
+
 func (c *Client) GetConnectedDevicesPerUser() (map[string]int, error) {
-	sessions, err := queryJellyfinApi[session](fmt.Sprintf("%s/Sessions?ApiKey=%s", c.jHost, c.jToken), c.httpClient)
+	sessions, err := queryJellyfinApi[[]session](fmt.Sprintf("%s/Sessions?ApiKey=%s", c.jHost, c.jToken), c.httpClient)
 	if err != nil {
 		return nil, err
 	}
 
 	userCountMap := make(map[string]int)
 	for i := 0; i < len(sessions); i++ {
-		if sessions[i].IsActive {
+		if c.isConnected(sessions[i]) {
 			userCountMap[sessions[i].UserName]++
 		}
 	}
 
 	return userCountMap, nil
+}
+
+func (c *Client) isConnected(s session) bool {
+	// If the user is playing media then they are connected.
+	if c.isActivelyPlaying(s) {
+		return true
+	}
+
+	// If a client has not had activity for 5 minutes, consider it stale.
+	if time.Since(s.LastActivityDate) > 5*time.Minute {
+		return false
+	}
+
+	return true
 }
 
 func (c *Client) GetMediaByType() (map[string]int, error) {

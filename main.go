@@ -1,10 +1,10 @@
 package main
 
 import (
+	"github.com/Digital-Shane/jelly-metrics/jellyfin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"jelly-metrics/jellyfin"
 	"log"
 	"log/slog"
 	"net/http"

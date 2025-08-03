@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -34,7 +35,8 @@ func NewClient(jellyfinHost, jellyfinToken string) *Client {
 }
 
 func (c *Client) GetActiveStreamsPerUser() (map[string]int, error) {
-	sessions, err := queryJellyfinApi[[]session](fmt.Sprintf("%s/Sessions?ApiKey=%s", c.jHost, c.jToken), c.httpClient)
+	var sessions []session
+	err := c.queryJellyfinApi("Sessions", &sessions)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +71,8 @@ func (c *Client) isActivelyPlaying(s session) bool {
 }
 
 func (c *Client) GetConnectedDevicesPerUser() (map[string]int, error) {
-	sessions, err := queryJellyfinApi[[]session](fmt.Sprintf("%s/Sessions?ApiKey=%s", c.jHost, c.jToken), c.httpClient)
+	var sessions []session
+	err := c.queryJellyfinApi("Sessions", &sessions)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +102,8 @@ func (c *Client) isConnected(s session) bool {
 }
 
 func (c *Client) GetMediaByType() (map[string]int, error) {
-	counts, err := queryJellyfinApi[mediaCounts](fmt.Sprintf("%s/Items/Counts?ApiKey=%s", c.jHost, c.jToken), c.httpClient)
+	var counts mediaCounts
+	err := c.queryJellyfinApi("Items/Counts", &counts)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +127,8 @@ func (c *Client) GetMediaByType() (map[string]int, error) {
 }
 
 func (c *Client) ValidateToken() error {
-	_, err := queryJellyfinApi[mediaCounts](fmt.Sprintf("%s/Items/Counts?ApiKey=%s", c.jHost, c.jToken), c.httpClient)
+	var counts mediaCounts
+	err := c.queryJellyfinApi("Items/Counts", &counts)
 	if errors.Is(ErrInvalidToken, err) {
 		return err
 	}
@@ -136,15 +141,27 @@ func addIfCountOverZero(key string, count int, countMap map[string]int) {
 	}
 }
 
-func queryJellyfinApi[response any](url string, client http.Client) (r response, err error) {
-	req, err := http.NewRequest("GET", url, nil)
+func (c *Client) queryJellyfinApi(route string, result any) error {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", c.jHost, route), nil)
 	if err != nil {
-		return r, errors.Join(ErrTechnicalError, err)
+		return errors.Join(ErrTechnicalError, err)
 	}
 
-	resp, err := client.Do(req)
+	// Generate client identification internally
+	clientName := "jelly-metrics"
+	clientVersion := "1.2.0"
+
+	// Use the new MediaBrowser authorization scheme - only include relevant params for a metrics API
+	authHeader := fmt.Sprintf(`MediaBrowser Token="%s", Client="%s", Version="%s"`,
+		url.QueryEscape(c.jToken),
+		url.QueryEscape(clientName),
+		url.QueryEscape(clientVersion))
+
+	req.Header.Set("Authorization", authHeader)
+
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return r, errors.Join(ErrTechnicalError, err)
+		return errors.Join(ErrTechnicalError, err)
 	}
 
 	defer func(Body io.ReadCloser) {
@@ -155,20 +172,20 @@ func queryJellyfinApi[response any](url string, client http.Client) (r response,
 	}(resp.Body)
 
 	if resp.StatusCode == 401 {
-		return r, ErrInvalidToken
+		return ErrInvalidToken
 	}
 
 	if resp.StatusCode >= 300 {
 		// The jellyfin API gives no info for errors in API responses,
 		// so all we can say is something went wrong.
-		return r, ErrUnknownApiError
+		return ErrUnknownApiError
 	}
 
 	d := json.NewDecoder(resp.Body)
-	err = d.Decode(&r)
+	err = d.Decode(result)
 	if err != nil {
-		return r, errors.Join(ErrUnknownApiResponse, err)
+		return errors.Join(ErrUnknownApiResponse, err)
 	}
 
-	return r, nil
+	return nil
 }

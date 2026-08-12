@@ -34,7 +34,7 @@ func NewClient(jellyfinHost, jellyfinToken string) *Client {
 }
 
 func (c *Client) GetActiveStreamsPerUser() (map[string]int, error) {
-	sessions, err := queryJellyfinApi[[]session](fmt.Sprintf("%s/Sessions?ApiKey=%s", c.jHost, c.jToken), c.httpClient)
+	sessions, err := queryJellyfinApi[[]session](fmt.Sprintf("%s/Sessions", c.jHost), c.jToken, c.httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (c *Client) isActivelyPlaying(s session) bool {
 }
 
 func (c *Client) GetConnectedDevicesPerUser() (map[string]int, error) {
-	sessions, err := queryJellyfinApi[[]session](fmt.Sprintf("%s/Sessions?ApiKey=%s", c.jHost, c.jToken), c.httpClient)
+	sessions, err := queryJellyfinApi[[]session](fmt.Sprintf("%s/Sessions", c.jHost), c.jToken, c.httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (c *Client) isConnected(s session) bool {
 }
 
 func (c *Client) GetMediaByType() (map[string]int, error) {
-	counts, err := queryJellyfinApi[mediaCounts](fmt.Sprintf("%s/Items/Counts?ApiKey=%s", c.jHost, c.jToken), c.httpClient)
+	counts, err := queryJellyfinApi[mediaCounts](fmt.Sprintf("%s/Items/Counts", c.jHost), c.jToken, c.httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -123,11 +123,8 @@ func (c *Client) GetMediaByType() (map[string]int, error) {
 }
 
 func (c *Client) ValidateToken() error {
-	_, err := queryJellyfinApi[mediaCounts](fmt.Sprintf("%s/Items/Counts?ApiKey=%s", c.jHost, c.jToken), c.httpClient)
-	if errors.Is(ErrInvalidToken, err) {
-		return err
-	}
-	return nil
+	_, err := queryJellyfinApi[mediaCounts](fmt.Sprintf("%s/Items/Counts", c.jHost), c.jToken, c.httpClient)
+	return err
 }
 
 func addIfCountOverZero(key string, count int, countMap map[string]int) {
@@ -136,11 +133,12 @@ func addIfCountOverZero(key string, count int, countMap map[string]int) {
 	}
 }
 
-func queryJellyfinApi[response any](url string, client http.Client) (r response, err error) {
+func queryJellyfinApi[response any](url, apiKey string, client http.Client) (r response, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return r, errors.Join(ErrTechnicalError, err)
 	}
+	req.Header.Set("Authorization", "MediaBrowser Token="+apiKey)
 
 	resp, err := client.Do(req)
 	if err != nil {

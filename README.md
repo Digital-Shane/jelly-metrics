@@ -14,19 +14,22 @@ A grafana dashboard using metrics from this exporter and prometheus scrape confi
 
 ## Table of Contents
 
-1. [Features](#features)
-2. [Getting Started](#getting-started)
-   1. [Prerequisites](#prerequisites)
-   2. [Installation](#installation)
-   3. [Run the Exporter](#run-the-exporter)
-3. [Configuration](#configuration)
-4. [Available Metrics](#available-metrics)
-   * [jellyfin_media_count](#jellyfin_media_count)
-   * [jellyfin_connected_clients_count](#jellyfin_connected_clients_count)
-   * [jellyfin_stream_count](#jellyfin_stream_count)
-5. [Contributing](#contributing)
-6. [Changelog](#changelog)
-7. [License](#license)
+- [Jelly Metrics](#jelly-metrics)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
+    - [Run the Exporter](#run-the-exporter)
+  - [Configuration](#configuration)
+  - [Available Metrics](#available-metrics)
+    - [jellyfin\_media\_count](#jellyfin_media_count)
+    - [jellyfin\_connected\_clients\_count](#jellyfin_connected_clients_count)
+    - [jellyfin\_stream\_count](#jellyfin_stream_count)
+  - [Contributing](#contributing)
+  - [Changelog](#changelog)
+  - [License](#license)
+- [Happy monitoring!](#happy-monitoring)
 
 ---
 
@@ -44,7 +47,7 @@ A grafana dashboard using metrics from this exporter and prometheus scrape confi
 
 - [Go](https://go.dev/) 1.23.6 or higher (if you intend to build from source)
 - A running [Jellyfin](https://jellyfin.org/) server
-- A valid Jellyfin API key
+- A valid, dedicated Jellyfin API key
 
 ### Installation
 
@@ -57,6 +60,7 @@ go install github.com/Digital-Shane/jelly-metrics@latest
 ```bash
 export JELLYFIN_TOKEN="YOUR_JELLYFIN_API_KEY"
 # Optional environment variables:
+# Use HTTPS if Jellyfin is not strictly local to this exporter.
 # export JELLYFIN_HOST="http://localhost:8096"
 # export PORT="8097"
 
@@ -67,11 +71,11 @@ export JELLYFIN_TOKEN="YOUR_JELLYFIN_API_KEY"
 
 ## Configuration
 
-| Environment Variable | Description                                                               | Default                      |
-|----------------------|---------------------------------------------------------------------------|------------------------------|
-| **JELLYFIN_TOKEN**   | **Required** – Jellyfin API token. Without this, the exporter cannot run. | *none* (must be provided)    |
-| **JELLYFIN_HOST**    | URL of your Jellyfin server.                                              | `http://localhost:8096`      |
-| **PORT**             | Port on which the jelly-metrics exporter listens.                         | `8097`                       |
+| Environment Variable | Description                                                                                | Default                   |
+| -------------------- | ------------------------------------------------------------------------------------------ | ------------------------- |
+| **JELLYFIN_TOKEN**   | **Required** – Jellyfin API key. It is sent in the HTTP Authorization header.              | *none* (must be provided) |
+| **JELLYFIN_HOST**    | URL of your Jellyfin server. Use HTTPS unless the exporter and server communicate locally. | `http://localhost:8096`   |
+| **PORT**             | Port on which the jelly-metrics exporter listens.                                          | `8097`                    |
 
 ---
 
